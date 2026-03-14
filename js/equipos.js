@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000/api'
+const API = 'https://prestamos-xi.vercel.app/api/'
 
 let todosLosEquipos = []
 let categoriaActiva = null
@@ -10,9 +10,9 @@ const ID_USUARIO = 1
 // ─── COLORES POR ESTADO ───────────────────────────────────────────
 function getBadgeColor(estado) {
     const colores = {
-        disponible:    '#22c55e',
-        prestado:      '#f59e0b',
-        dañado:        '#ef4444',
+        disponible: '#22c55e',
+        prestado: '#f59e0b',
+        dañado: '#ef4444',
         mantenimiento: '#6366f1'
     }
     return colores[estado] || '#94a3b8'
@@ -20,9 +20,9 @@ function getBadgeColor(estado) {
 
 function getBadgeIcon(estado) {
     const iconos = {
-        disponible:    'fa-circle-check',
-        prestado:      'fa-clock',
-        dañado:        'fa-triangle-exclamation',
+        disponible: 'fa-circle-check',
+        prestado: 'fa-clock',
+        dañado: 'fa-triangle-exclamation',
         mantenimiento: 'fa-wrench'
     }
     return iconos[estado] || 'fa-circle'
@@ -31,7 +31,7 @@ function getBadgeIcon(estado) {
 // ─── RENDERIZAR TARJETAS ──────────────────────────────────────────
 function renderizarEquipos(equipos) {
     const contenedor = document.getElementById('contenedorEquipos')
-    const subtitulo  = document.getElementById('subtituloSeccion')
+    const subtitulo = document.getElementById('subtituloSeccion')
 
     subtitulo.textContent = `${equipos.length} equipo${equipos.length !== 1 ? 's' : ''} encontrado${equipos.length !== 1 ? 's' : ''}`
 
@@ -152,50 +152,66 @@ function filtrarCategorias() {
 // ─── CARGAR CATEGORÍAS ────────────────────────────────────────────
 async function cargarCategorias() {
     try {
-        const res = await fetch(`${API}/categorias`)
-        const categorias = await res.json()
+        const res = await fetch(`${API}/categorias`);
+        const categorias = await res.json();
 
-        const lista = document.getElementById('listaCategorias')
-        document.getElementById('cargandoCategorias').remove()
+        const lista = document.getElementById('listaCategorias');
+        const loader = document.getElementById('cargandoCategorias');
+        
+        if (loader) loader.remove();
+        if (!lista) return;
+
+        // Limpiar lista antes de agregar (por si se llama varias veces)
+        lista.innerHTML = '';
 
         categorias.forEach(cat => {
-            const count = todosLosEquipos.filter(e => e.id_categoria === cat.id_categoria).length
-            if (count === 0) return
+            // Filtrar para mostrar solo categorías que tienen equipos
+            const count = todosLosEquipos.filter(e => e.id_categoria === cat.id_categoria).length;
+            if (count === 0) return;
 
-            const li = document.createElement('li')
+            const li = document.createElement('li');
             li.innerHTML = `
                 <a class="categoria-item" data-nombre="${cat.nombre}"
                 onclick="seleccionarCategoria(${cat.id_categoria}, this)">
                     <i class="fas fa-box"></i>
                     <span>${cat.nombre}</span>
                     <span class="badge-count">${count}</span>
-                </a>`
-            lista.appendChild(li)
-        })
+                </a>`;
+            lista.appendChild(li);
+        });
 
-        document.getElementById('badge-todos').textContent = todosLosEquipos.length
+        const badgeTodos = document.getElementById('badge-todos');
+        if (badgeTodos) badgeTodos.textContent = todosLosEquipos.length;
 
     } catch (error) {
-        console.error('Error cargando categorías:', error)
+        console.error('Error cargando categorías:', error);
     }
 }
 
 // ─── CARGAR EQUIPOS ───────────────────────────────────────────────
 async function cargarEquipos() {
+    const contenedor = document.getElementById('contenedorEquipos');
     try {
-        const res = await fetch(`${API}/equipos`)
-        const data = await res.json()
+        const res = await fetch(`${API}/equipos`);
+        if (!res.ok) throw new Error('Error al obtener equipos');
+        
+        const data = await res.json();
+        todosLosEquipos = data;
 
-        todosLosEquipos = data
-        renderizarEquipos(todosLosEquipos)
-        await cargarCategorias()
+        // Renderizamos inicialmente
+        renderizarEquipos(todosLosEquipos);
+        
+        // Cargamos categorías DESPUÉS de tener los equipos para los contadores
+        await cargarCategorias();
 
     } catch (error) {
-        document.getElementById('contenedorEquipos').innerHTML = `
+        console.error("Error detallado:", error);
+        contenedor.innerHTML = `
             <div class="sin-resultados">
                 <i class="fas fa-triangle-exclamation"></i>
                 <p>Error al conectar con el servidor: ${error.message}</p>
-            </div>`
+                <button onclick="location.reload()" class="btn-solicitar" style="margin-top:10px">Reintentar</button>
+            </div>`;
     }
 }
 
