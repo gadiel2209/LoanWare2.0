@@ -1,105 +1,141 @@
-const API   = 'https://prestamos-xi.vercel.app/api'
-const token = localStorage.getItem('token')
+const API = 'https://prestamos-xi.vercel.app/api';
+const token = localStorage.getItem('token');
 
-// ── PROTEGER PÁGINA — si no hay sesión, mandar al login ───────────
-if (!token) window.location.href = 'login.html'
-
-// ── MOSTRAR ALERTA ────────────────────────────────────────────────
-function mostrarAlerta(mensaje, tipo = 'success') {
-    const alerta = document.getElementById('alertaPerfil')
-    alerta.style.display      = 'flex'
-    alerta.style.background   = tipo === 'success' ? 'rgba(34,197,94,0.1)'  : 'rgba(239,68,68,0.1)'
-    alerta.style.color        = tipo === 'success' ? '#16a34a'               : '#dc2626'
-    alerta.style.border       = `1.5px solid ${tipo === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`
-    alerta.innerHTML          = `<i class="fas fa-${tipo === 'success' ? 'circle-check' : 'triangle-exclamation'}"></i> ${mensaje}`
-    setTimeout(() => alerta.style.display = 'none', 4000)
+// 1. Protección de ruta: Si no hay token, redirigir al login
+if (!token) {
+    window.location.href = '../login.html';
 }
 
-// ── CARGAR PERFIL ─────────────────────────────────────────────────
-async function cargarPerfil() {
+function obtenerIdDesdeToken(token) {
     try {
-        const res  = await fetch(`${API}/usuarios/perfil`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        return payload.id; // Ajusta 'id' según cómo lo guarde tu backend en el JWT
+    } catch (error) {
+        console.error("Error al decodificar el token:", error);
+        return null;
+    }
+}
 
-        if (res.status === 401 || res.status === 403) {
-            localStorage.clear()
-            window.location.href = 'login.html'
-            return
+async function cargarPerfil() {
+    // Obtenemos el ID del usuario (puedes usar el del token o uno fijo para pruebas)
+    const userId = obtenerIdDesdeToken(token) || 22; 
+
+    try {
+        // Usamos la ruta que indicaste: /api/usuario/ID
+        const res = await fetch(`${API}/usuario/${userId}`, {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!res.ok) {
+            console.error("No se pudo obtener la información del usuario");
+            return;
         }
 
-        const data = await res.json()
+        const data = await res.json();
+        console.log("Datos del usuario:", data);
 
-        const nombreCompleto = `${data.nombre} ${data.ap_paterno} ${data.ap_materno}`
-        const inicial        = data.nombre?.charAt(0).toUpperCase() || '?'
-        const rol            = data.rol || (data.id_rol === 1 ? 'Administrador' : 'Usuario')
+        // --- Inyección en el HTML ---
 
-        // Header
-        document.getElementById('headerNombre').textContent = data.nombre
+        // Nombre en el saludo/avatar
+        const perfilNombre = document.getElementById('perfilNombre');
+        if (perfilNombre) perfilNombre.textContent = data.nombre || 'Usuario';
 
-        // Avatar
-        document.getElementById('avatarLetra').textContent = inicial
+        // Letra inicial del Avatar
+        const avatarLetra = document.getElementById('avatarLetra');
+        if (avatarLetra && data.nombre) {
+            avatarLetra.textContent = data.nombre.charAt(0).toUpperCase();
+        }
 
-        // Campos
-        document.getElementById('perfilNombre').textContent        = nombreCompleto
-        document.getElementById('perfilNombreCompleto').textContent = nombreCompleto
-        document.getElementById('perfilUsuario').textContent       = `@${data.usuario}`
-        document.getElementById('perfilCorreo').textContent        = data.correo
-        document.getElementById('perfilRol').textContent           = rol
-        document.getElementById('perfilRolTag').textContent        = rol
+        // Etiquetas de Rol
+        const rolTexto = data.rol || (data.id_rol === 1 ? 'Administrador' : 'Usuario');
+        const perfilRolTag = document.getElementById('perfilRolTag');
+        if (perfilRolTag) perfilRolTag.textContent = rolTexto;
 
-        // Actualizar localStorage
-        localStorage.setItem('nombre', nombreCompleto)
+        // Nombre Completo (Concatenación de campos)
+        const nombreComp = `${data.nombre || ''} ${data.ap_paterno || ''} ${data.ap_materno || ''}`.trim();
+        const elNombreComp = document.getElementById('perfilNombreCompleto');
+        if (elNombreComp) elNombreComp.textContent = nombreComp || 'No disponible';
+
+        // Usuario y Correo
+        const elUsuario = document.getElementById('perfilUsuario');
+        if (elUsuario) elUsuario.textContent = data.usuario ? `@${data.usuario}` : '—';
+
+        const elCorreo = document.getElementById('perfilCorreo');
+        if (elCorreo) elCorreo.textContent = data.correo || '—';
+
+        const elRol = document.getElementById('perfilRol');
+        if (elRol) elRol.textContent = rolTexto;
 
     } catch (error) {
-        console.error('Error cargando perfil:', error)
+        console.error('Error de conexión:', error);
     }
 }
 
-// ── CAMBIAR CONTRASEÑA ────────────────────────────────────────────
-async function cambiarPassword() {
-    const password_actual = document.getElementById('passwordActual').value
-    const password_nueva  = document.getElementById('passwordNueva').value
+// Función auxiliar para mostrar mensajes en el cuadro de alerta
+function mostrarAlerta(msj, tipo) {
+    const alerta = document.getElementById('alertaPerfil');
+    if (!alerta) return;
 
-    if (!password_actual || !password_nueva) {
-        mostrarAlerta('Completa ambos campos de contraseña.', 'error')
-        return
+    alerta.style.display = 'flex';
+    alerta.textContent = msj;
+    
+    if (tipo === 'error') {
+        alerta.style.backgroundColor = '#fecaca'; // Rojo claro
+        alerta.style.color = '#b91c1c';
+    } else {
+        alerta.style.backgroundColor = '#dcfce7'; // Verde claro
+        alerta.style.color = '#15803d';
     }
 
-    if (password_nueva.length < 6) {
-        mostrarAlerta('La nueva contraseña debe tener al menos 6 caracteres.', 'error')
-        return
+    // Ocultar después de 4 segundos
+    setTimeout(() => { alerta.style.display = 'none'; }, 4000);
+}
+
+// --- Función para cambiar contraseña ---
+async function cambiarPassword() {
+    const passNueva = document.getElementById('passwordNueva').value;
+    const userId = obtenerIdDesdeToken(token) || 34; // Usando el 34 que sale en tu consola
+
+    if (!passNueva) {
+        mostrarAlerta("Escribe una nueva contraseña", "error");
+        return;
     }
 
     try {
-        const res  = await fetch(`${API}/usuarios/password`, {
-            method:  'PUT',
+        const res = await fetch(`${API}/usuario/${userId}`, { 
+            method: 'PUT',
             headers: {
-                'Content-Type':  'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ password_actual, password_nueva })
-        })
-
-        const data = await res.json()
+            body: JSON.stringify({
+                password: passNueva // <--- EL NOMBRE DEBE SER "password"
+            })
+        });
 
         if (res.ok) {
-            mostrarAlerta(data.message, 'success')
-            document.getElementById('formPassword').reset()
+            mostrarAlerta("¡Contraseña actualizada!", "success");
+            document.getElementById('formPassword').reset();
         } else {
-            mostrarAlerta(data.message || 'Error al cambiar la contraseña.', 'error')
+            const errorData = await res.json();
+            mostrarAlerta(errorData.message || "Error al actualizar", "error");
         }
-
-    } catch {
-        mostrarAlerta('Error de conexión.', 'error')
+    } catch (error) {
+        mostrarAlerta("Error de conexión", "error");
     }
 }
 
-// ── CERRAR SESIÓN ─────────────────────────────────────────────────
 function cerrarSesion() {
-    localStorage.clear()
-    window.location.href = 'login.html'
+    localStorage.removeItem('token');
+    localStorage.clear();
+    window.location.href = '../login.html';
 }
 
-// ── INICIAR ───────────────────────────────────────────────────────
-cargarPerfil()
+// Ejecutar automáticamente cuando el HTML esté listo
+document.addEventListener('DOMContentLoaded', cargarPerfil);

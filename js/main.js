@@ -88,3 +88,35 @@ document.addEventListener('click', (e) => {
         accessMenu.classList.remove('active');
     }
 });
+
+
+function actualizarBotonSesion() {
+    // Buscamos el botón por ID (asegúrate de ponerle id="btnSesion" en el HTML)
+    const btnSesion = document.getElementById('btnSesion');
+    const token = localStorage.getItem('token');
+    const nombreUsuario = localStorage.getItem('nombre');
+
+    if (token && btnSesion) {
+        // SI HAY SESIÓN:
+        // 1. Cambiamos el texto y el icono
+        btnSesion.innerHTML = `<i class="fas fa-user-circle"></i> ${nombreUsuario || 'Mi Perfil'}`;
+        
+        // 2. Apuntamos al perfil (está en la misma carpeta 'public')
+        btnSesion.href = 'perfil.html';
+        
+        // 3. Estilo visual de "Sesión Activa" (Opcional)
+        btnSesion.style.background = 'var(--accent)';
+        btnSesion.style.color = 'var(--primary)';
+    } else if (btnSesion) {
+        // SI NO HAY SESIÓN:
+        // El login está afuera de la carpeta 'public'
+        btnSesion.href = '../login.html';
+        btnSesion.innerHTML = `<i class="fas fa-right-to-bracket"></i> Iniciar Sesión`;
+    }
+}
+
+// ─── INICIALIZACIÓN ───────────────────────────────────────────────
+// Ejecutamos la función de sesión cuando cargue el documento
+document.addEventListener('DOMContentLoaded', () => {
+    actualizarBotonSesion();
+});

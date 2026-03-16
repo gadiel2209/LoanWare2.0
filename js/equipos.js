@@ -7,18 +7,27 @@ let paginaActual = 1
 const POR_PAGINA = 10
 
 // ─── SESIÓN ───────────────────────────────────────────────────────
-const token = localStorage.getItem('token')
-const haySession = !!token
+const token = localStorage.getItem('token');
+const haySession = !!token;
 
-if (haySession) {
+function verificarSesion() {
     const banner = document.getElementById('bannerGuest')
-    if (banner) banner.style.display = 'none'
-
     const btnSesion = document.getElementById('btnSesion')
-    if (btnSesion) {
-        const nombre = localStorage.getItem('nombre') || 'Mi Perfil'
-        btnSesion.innerHTML = `<i class="fas fa-user-circle"></i> ${nombre}`
-        btnSesion.href = 'perfil.html'
+
+    if (haySession) {
+        if (banner) banner.style.display = 'none'
+
+        if (btnSesion) {
+            const nombre = localStorage.getItem('nombre') || 'Mi Perfil'
+            btnSesion.innerHTML = `<i class="fas fa-user-circle"></i> ${nombre}`
+            // Perfil está en la misma carpeta 'public'
+            btnSesion.href = 'perfil.html'
+        }
+    } else {
+        if (btnSesion) {
+            // CORRECCIÓN: Salir de public/ para encontrar login.html en la raíz
+            btnSesion.href = '../login.html'
+        }
     }
 }
 
@@ -36,8 +45,9 @@ function getBadgeColor(estado) {
 // ─── BOTÓN SOLICITAR ──────────────────────────────────────────────
 async function solicitarEquipo(id_equipo, nombre, btn) {
     if (!haySession) {
-        sessionStorage.setItem('redirectAfterLogin', 'equipos.html')
-        window.location.href = 'login.html'
+        sessionStorage.setItem('redirectAfterLogin', 'public/equipos.html')
+        // CORRECCIÓN: Salir de public/ para ir al login
+        window.location.href = '../login.html'
         return
     }
 
@@ -91,9 +101,10 @@ function mostrarToast(mensaje, tipo = 'success') {
 function renderizarEquipos(equipos) {
     const contenedor = document.getElementById('contenedorEquipos')
     const subtitulo = document.getElementById('subtituloSeccion')
+    
+    equiposFiltrados = equipos; // Actualizar globales para paginación
     const totalPags = Math.ceil(equipos.length / POR_PAGINA)
 
-    // Asegurar que paginaActual no supere el total
     if (paginaActual > totalPags) paginaActual = 1
 
     const inicio = (paginaActual - 1) * POR_PAGINA
@@ -116,6 +127,7 @@ function renderizarEquipos(equipos) {
         let boton = ''
 
         if (disponible) {
+            // CORRECCIÓN: El link de login debe llevar ../ si no hay sesión
             boton = haySession ?
                 `<button onclick="solicitarEquipo(${equipo.id_equipo}, '${equipo.nombre.replace(/'/g, "\\'")}', this)"
                     style="margin-top:12px; width:100%; padding:10px; border:none;
@@ -123,7 +135,7 @@ function renderizarEquipos(equipos) {
                     font-size:0.85rem; cursor:pointer; font-family:'Montserrat',sans-serif; transition:0.2s;">
                     <i class="fas fa-hand-holding"></i> Solicitar
                 </button>` :
-                `<a href="login.html"
+                `<a href="../login.html"
                     style="display:block; margin-top:12px; width:100%; padding:10px; text-align:center;
                     background:var(--primary); color:white; border-radius:10px; font-weight:700;
                     font-size:0.85rem; text-decoration:none; box-sizing:border-box;">
@@ -166,7 +178,6 @@ function renderizarEquipos(equipos) {
     }).join('')
 
     renderizarPaginacion(totalPags, paginaActual)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // ─── RENDERIZAR PAGINACIÓN ────────────────────────────────────────
@@ -178,111 +189,70 @@ function renderizarPaginacion(totalPags, actual) {
         paginador.id = 'paginador'
         paginador.style.cssText = `
             display:flex; justify-content:center; align-items:center;
-            gap:8px; margin-top:40px; flex-wrap:wrap;`
-        document.getElementById('contenedorEquipos').insertAdjacentElement('afterend', paginador)
+            gap:8px; margin-top:40px; flex-wrap:wrap; width:100%;`
+        const contenedorPadre = document.getElementById('contenedorEquipos').parentElement;
+        contenedorPadre.appendChild(paginador);
     }
 
     if (totalPags <= 1) { paginador.innerHTML = ''; return }
 
     let html = ''
+    html += `<button onclick="cambiarPagina(${actual - 1})" ${actual === 1 ? 'disabled' : ''} class="btn-pag"> < </button>`
 
-    // Botón anterior
-    html += `<button onclick="cambiarPagina(${actual - 1})" ${actual === 1 ? 'disabled' : ''}
-        style="padding:8px 14px; border-radius:8px; border:1.5px solid #e2e8f0;
-        background:white; cursor:pointer; font-family:'Montserrat',sans-serif;
-        font-weight:600; font-size:0.82rem; color:var(--primary);
-        transition:0.2s; ${actual === 1 ? 'opacity:0.4; cursor:not-allowed;' : ''}">
-        <i class="fas fa-chevron-left"></i>
-    </button>`
-
-    // Números
     for (let i = 1; i <= totalPags; i++) {
         const esActual = i === actual
-        html += `<button onclick="cambiarPagina(${i})"
-            style="padding:8px 14px; border-radius:8px; border:1.5px solid ${esActual ? 'var(--primary)' : '#e2e8f0'};
-            background:${esActual ? 'var(--primary)' : 'white'};
-            color:${esActual ? 'white' : 'var(--primary)'};
-            cursor:pointer; font-family:'Montserrat',sans-serif;
-            font-weight:700; font-size:0.82rem; transition:0.2s; min-width:36px;">
-            ${i}
-        </button>`
+        html += `<button onclick="cambiarPagina(${i})" 
+                style="background:${esActual ? 'var(--primary)' : 'white'}; color:${esActual ? 'white' : 'var(--primary)'}"
+                class="btn-pag">${i}</button>`
     }
 
-    // Botón siguiente
-    html += `<button onclick="cambiarPagina(${actual + 1})" ${actual === totalPags ? 'disabled' : ''}
-        style="padding:8px 14px; border-radius:8px; border:1.5px solid #e2e8f0;
-        background:white; cursor:pointer; font-family:'Montserrat',sans-serif;
-        font-weight:600; font-size:0.82rem; color:var(--primary);
-        transition:0.2s; ${actual === totalPags ? 'opacity:0.4; cursor:not-allowed;' : ''}">
-        <i class="fas fa-chevron-right"></i>
-    </button>`
-
+    html += `<button onclick="cambiarPagina(${actual + 1})" ${actual === totalPags ? 'disabled' : ''} class="btn-pag"> > </button>`
     paginador.innerHTML = html
 }
 
-// ─── CAMBIAR PÁGINA ───────────────────────────────────────────────
 function cambiarPagina(pagina) {
     const totalPags = Math.ceil(equiposFiltrados.length / POR_PAGINA)
     if (pagina < 1 || pagina > totalPags) return
     paginaActual = pagina
     renderizarEquipos(equiposFiltrados)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // ─── SELECCIONAR CATEGORÍA ────────────────────────────────────────
 function seleccionarCategoria(nombreCategoria, elemento) {
-    // Quitar clase activa de todos
     document.querySelectorAll('.categoria-item').forEach(el => el.classList.remove('activa'));
-    // Poner clase activa al seleccionado
-    elemento.classList.add('activa');
+    if(elemento) elemento.classList.add('activa');
 
     categoriaActiva = nombreCategoria;
-
     const titulo = document.getElementById('tituloSeccion');
     titulo.textContent = nombreCategoria ? nombreCategoria : 'Catálogo de Equipos';
 
-    // Filtrar por el nombre de la categoría
     const filtrados = nombreCategoria
         ? todosLosEquipos.filter(e => e.categoria.trim().toLowerCase() === nombreCategoria.trim().toLowerCase())
         : todosLosEquipos;
 
+    paginaActual = 1;
     renderizarEquipos(filtrados);
 }
 
-
-// ─── FILTRAR CATEGORÍAS EN SIDEBAR ───────────────────────────────
-function filtrarCategorias() {
-    const texto = document.getElementById('buscador').value.toLowerCase()
-    document.querySelectorAll('.categoria-item[data-nombre]').forEach(el => {
-        const nombre = el.dataset.nombre.toLowerCase()
-        el.parentElement.style.display = nombre.includes(texto) ? '' : 'none'
-    })
-}
-
-// ─── CARGAR CATEGORÍAS ────────────────────────────────────────────
+// ─── CARGAR CATEGORÍAS Y EQUIPOS ─────────────────────────────────
 async function cargarCategorias() {
     try {
         const res = await fetch(`${API}/categorias`);
         const categorias = await res.json();
-
         const lista = document.getElementById('listaCategorias');
-        const loader = document.getElementById('cargandoCategorias');
-        
-        if (loader) loader.remove();
         if (!lista) return;
 
-        // 1. Limpiamos la lista excepto el primer elemento (Todos los equipos)
         const itemTodos = lista.firstElementChild;
         lista.innerHTML = '';
         lista.appendChild(itemTodos);
 
         categorias.forEach(cat => {
-            // 2. CORRECCIÓN: Filtramos por el NOMBRE de la categoría
-            // Comparamos el nombre de la categoría de la API con el campo 'categoria' del equipo
             const count = todosLosEquipos.filter(e => 
                 e.categoria.trim().toLowerCase() === cat.nombre.trim().toLowerCase()
             ).length;
 
-            if (count === 0) return; // Si no hay equipos, no mostramos la categoría
+            if (count === 0) return;
 
             const li = document.createElement('li');
             li.innerHTML = `
@@ -298,36 +268,21 @@ async function cargarCategorias() {
         const badgeTodos = document.getElementById('badge-todos');
         if (badgeTodos) badgeTodos.textContent = todosLosEquipos.length;
 
-    } catch (error) {
-        console.error('Error cargando categorías:', error);
-    }
+    } catch (error) { console.error('Error:', error); }
 }
 
-// ─── CARGAR EQUIPOS ───────────────────────────────────────────────
 async function cargarEquipos() {
-    const contenedor = document.getElementById('contenedorEquipos');
     try {
         const res = await fetch(`${API}/equipos`);
-        if (!res.ok) throw new Error('Error al obtener equipos');
-
         const data = await res.json();
         todosLosEquipos = data;
-
-        // Renderizamos inicialmente
         renderizarEquipos(todosLosEquipos);
-
-        // Cargamos categorías DESPUÉS de tener los equipos para los contadores
         await cargarCategorias();
-
     } catch (error) {
-        console.error("Error detallado:", error);
-        contenedor.innerHTML = `
-            <div class="sin-resultados">
-                <i class="fas fa-triangle-exclamation"></i>
-                <p>Error al conectar con el servidor: ${error.message}</p>
-                <button onclick="location.reload()" class="btn-solicitar" style="margin-top:10px">Reintentar</button>
-            </div>`;
+        console.error("Error:", error);
     }
 }
 
-cargarEquipos()
+// ─── INICIO ───────────────────────────────────────────────────────
+verificarSesion();
+cargarEquipos();
