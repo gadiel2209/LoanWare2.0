@@ -101,36 +101,43 @@ async function iniciarSesion() {
     setLoading(true)
 
     try {
-        const res  = await fetch(`${API}/auth/login`, {
-            method:  'POST',
+        const res = await fetch(`${API}/auth/login`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ correo, password })
-        })
+            body: JSON.stringify({ correo, password })
+        });
 
-        const data = await res.json()
-
-        if (!res.ok) {
-            mostrarError(data.message || 'Credenciales inválidas.')
-            return
+        // Verificamos si la respuesta es JSON antes de procesar
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("El servidor no respondió con JSON. Posible error 500.");
         }
 
-        // Guardar sesión en localStorage
-        localStorage.setItem('token',      data.token)
-        localStorage.setItem('id_usuario', data.usuario.id)
-        localStorage.setItem('nombre',     data.usuario.nombre)
-        localStorage.setItem('usuario',    data.usuario.usuario)
-        localStorage.setItem('id_rol',     data.usuario.id_rol)
+        const data = await res.json();
 
-        // Redirigir según rol
-        // id_rol 1 = Administrador, id_rol 2 = Usuario normal
-        window.location.href = data.usuario.id_rol === 1
-            ? 'adminDashboard.html'
-            : 'home.html'
+        if (!res.ok) {
+            mostrarError(data.message || 'Credenciales inválidas.');
+            return;
+        }
 
-    } catch {
-        mostrarError('Error de conexión. Verifica que el servidor esté activo.')
+        // VALIDACIÓN CRUCIAL: Verificar que 'data.usuario' existe antes de usarlo
+        if (!data.usuario) {
+            mostrarError('Error: El servidor no envió los datos del usuario.');
+            return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('id_usuario', data.usuario.id);
+        localStorage.setItem('nombre', data.usuario.nombre);
+        localStorage.setItem('id_rol', data.usuario.id_rol);
+
+        window.location.href = data.usuario.id_rol === 1 ? 'adminDashboard.html' : 'home.html';
+
+    } catch (err) {
+        console.error(err);
+        mostrarError('Error de conexión o error interno del servidor (500).');
     } finally {
-        setLoading(false)
+        setLoading(false);
     }
 }
 
