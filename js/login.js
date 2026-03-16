@@ -72,7 +72,7 @@ function setLoading(loading) {
 // ── REDIRIGIR SEGÚN ROL ───────────────────────────────────────────
 function redirigir(id_rol) {
     // Ajusta estas rutas según donde estén tus archivos en GitHub Pages
-    window.location.href = id_rol === 1 ? 'adminDashboard.html' : 'home.html'
+    window.location.href = id_rol === 1 ? 'adminDashboard.html' : 'public/home.html'
 }
 
 // ── LOGIN PRINCIPAL ────────────────────────────────────────────────
