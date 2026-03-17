@@ -44,6 +44,7 @@ function getBadgeColor(estado) {
 
 // ─── BOTÓN SOLICITAR ──────────────────────────────────────────────
 async function solicitarEquipo(id_equipo, nombre, btn) {
+    console.log("Intentando solicitar equipo ID:", id_equipo);  
     if (!haySession) {
         sessionStorage.setItem('redirectAfterLogin', 'public/equipos.html')
         // CORRECCIÓN: Salir de public/ para ir al login
@@ -51,7 +52,7 @@ async function solicitarEquipo(id_equipo, nombre, btn) {
         return
     }
 
-    const id_usuario = parseInt(localStorage.getItem('id_usuario'))
+    const id_usuario = parseInt(localStorage.getItem('id_usuario')) 
     btn.disabled = true
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Solicitando...'
 
@@ -127,9 +128,9 @@ function renderizarEquipos(equipos) {
         let boton = ''
 
         if (disponible) {
-            // CORRECCIÓN: El link de login debe llevar ../ si no hay sesión
+            // Busca esta línea en tu función renderizarEquipos y cámbiala por esta:
             boton = haySession ?
-                `<button onclick="solicitarEquipo(${equipo.id_equipo}, '${equipo.nombre.replace(/'/g, "\\'")}', this)"
+                `<button onclick="solicitarEquipo(${equipo.id_equipo}, '${equipo.nombre.replace(/"/g, '')}', this)"
                     style="margin-top:12px; width:100%; padding:10px; border:none;
                     background:var(--primary); color:white; border-radius:10px; font-weight:700;
                     font-size:0.85rem; cursor:pointer; font-family:'Montserrat',sans-serif; transition:0.2s;">
