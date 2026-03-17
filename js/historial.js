@@ -4,15 +4,19 @@ let todasLasSolicitudes = []
 
 // ─── OBTENER ID USUARIO DEL JWT ───────────────────────────────────
 function getUsuarioFromToken() {
-    const token = localStorage.getItem('token')
-    if (!token) return null
+    const token = localStorage.getItem('token');
+    if (!token) return null;
     try {
-        // El JWT tiene 3 partes separadas por "."
-        // La segunda parte es el payload en base64
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        return payload
-    } catch {
-        return null
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        console.error("Error al decodificar token", e);
+        return null;
     }
 }
 
@@ -113,9 +117,10 @@ function filtrar(estado, btn) {
 
 // ─── CARGAR DATOS ─────────────────────────────────────────────────
 async function cargarSolicitudes() {
-    const usuario = getUsuarioFromToken()
+const usuario = getUsuarioFromToken();
+    const token = localStorage.getItem('token'); // Recuperar token
 
-    if (!usuario) {
+    if (!usuario || !token) {
         document.getElementById('contenedorSolicitudes').innerHTML = `
             <div style="text-align:center; padding: 60px; color: var(--text-muted);">
                 <i class="fas fa-lock" style="font-size: 2.5rem; opacity:0.3; display:block; margin-bottom:15px;"></i>
@@ -124,7 +129,7 @@ async function cargarSolicitudes() {
                     Iniciar Sesión
                 </a>
             </div>`
-        return
+        return;
     }
 
     // Mostrar nombre en el header
@@ -133,14 +138,22 @@ async function cargarSolicitudes() {
     }
 
     try {
-        const res  = await fetch(`${API}/solicitudes/usuario/${usuario.id_usuario}`)
+        const idFinal = usuario.id_usuario || usuario.id; 
+        console.log("Cargando solicitudes para el ID:", idFinal); // Para debug
+
+        const res = await fetch(`${API}/solicitudes/usuario/${idFinal}`, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
         const data = await res.json()
 
         if (!res.ok) throw new Error(data.message)
 
         todasLasSolicitudes = data.solicitudes
         renderizarStats(data.stats)
-        renderizarSolicitudes(todasLasSolicitudes)
+        renderizarSolicitudes(todasLasSolicitudes)  
 
     } catch (error) {
         document.getElementById('contenedorSolicitudes').innerHTML = `
