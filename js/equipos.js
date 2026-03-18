@@ -7,8 +7,8 @@ let paginaActual = 1
 const POR_PAGINA = 10
 
 // ─── SESIÓN ───────────────────────────────────────────────────────
-const token = localStorage.getItem('token');
-const haySession = !!token;
+const token = localStorage.getItem('token')
+const haySession = !!token
 
 function verificarSesion() {
     const banner = document.getElementById('bannerGuest')
@@ -16,18 +16,13 @@ function verificarSesion() {
 
     if (haySession) {
         if (banner) banner.style.display = 'none'
-
         if (btnSesion) {
             const nombre = localStorage.getItem('nombre') || 'Mi Perfil'
             btnSesion.innerHTML = `<i class="fas fa-user-circle"></i> ${nombre}`
-            // Perfil está en la misma carpeta 'public'
             btnSesion.href = 'perfil.html'
         }
     } else {
-        if (btnSesion) {
-            // CORRECCIÓN: Salir de public/ para encontrar login.html en la raíz
-            btnSesion.href = '../login.html'
-        }
+        if (btnSesion) btnSesion.href = '../login.html'
     }
 }
 
@@ -42,17 +37,42 @@ function getBadgeColor(estado) {
     return colores[estado] || '#94a3b8'
 }
 
+// ─── BUSCAR EQUIPOS POR NOMBRE ────────────────────────────────────
+function buscarEquipos() {
+    const texto = document.getElementById('buscadorEquipos')?.value.trim().toLowerCase() || ''
+
+    const base = categoriaActiva
+        ? todosLosEquipos.filter(e =>
+            e.categoria.trim().toLowerCase() === categoriaActiva.trim().toLowerCase())
+        : todosLosEquipos
+
+    const filtrados = texto
+        ? base.filter(e => e.nombre.toLowerCase().includes(texto) ||
+            (e.descripcion || '').toLowerCase().includes(texto))
+        : base
+
+    paginaActual = 1
+    renderizarEquipos(filtrados)
+}
+
+// ─── FILTRAR CATEGORÍAS EN SIDEBAR ───────────────────────────────
+function filtrarCategorias() {
+    const texto = document.getElementById('buscador').value.toLowerCase()
+    document.querySelectorAll('.categoria-item[data-nombre]').forEach(el => {
+        el.parentElement.style.display =
+            el.dataset.nombre.toLowerCase().includes(texto) ? '' : 'none'
+    })
+}
+
 // ─── BOTÓN SOLICITAR ──────────────────────────────────────────────
 async function solicitarEquipo(id_equipo, nombre, btn) {
-    console.log("Intentando solicitar equipo ID:", id_equipo);  
     if (!haySession) {
         sessionStorage.setItem('redirectAfterLogin', 'public/equipos.html')
-        // CORRECCIÓN: Salir de public/ para ir al login
         window.location.href = '../login.html'
         return
     }
 
-    const id_usuario = parseInt(localStorage.getItem('id_usuario')) 
+    const id_usuario = parseInt(localStorage.getItem('id_usuario'))
     btn.disabled = true
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Solicitando...'
 
@@ -98,14 +118,13 @@ function mostrarToast(mensaje, tipo = 'success') {
     setTimeout(() => toast.remove(), 3500)
 }
 
-// ─── RENDERIZAR PÁGINA ────────────────────────────────────────────
+// ─── RENDERIZAR EQUIPOS ───────────────────────────────────────────
 function renderizarEquipos(equipos) {
     const contenedor = document.getElementById('contenedorEquipos')
     const subtitulo = document.getElementById('subtituloSeccion')
-    
-    equiposFiltrados = equipos; // Actualizar globales para paginación
-    const totalPags = Math.ceil(equipos.length / POR_PAGINA)
 
+    equiposFiltrados = equipos
+    const totalPags = Math.ceil(equipos.length / POR_PAGINA)
     if (paginaActual > totalPags) paginaActual = 1
 
     const inicio = (paginaActual - 1) * POR_PAGINA
@@ -117,7 +136,7 @@ function renderizarEquipos(equipos) {
         contenedor.innerHTML = `
             <div class="sin-resultados">
                 <i class="fas fa-box-open"></i>
-                <p>No hay equipos en esta categoría.</p>
+                <p>No se encontraron coincidencias.</p>
             </div>`
         renderizarPaginacion(0, 0)
         return
@@ -128,27 +147,26 @@ function renderizarEquipos(equipos) {
         let boton = ''
 
         if (disponible) {
-            // Busca esta línea en tu función renderizarEquipos y cámbiala por esta:
-            boton = haySession ?
-                `<button onclick="solicitarEquipo(${equipo.id_equipo}, '${equipo.nombre.replace(/"/g, '')}', this)"
+            boton = haySession
+                ? `<button onclick="solicitarEquipo(${equipo.id_equipo}, '${equipo.nombre.replace(/"/g, '')}', this)"
                     style="margin-top:12px; width:100%; padding:10px; border:none;
                     background:var(--primary); color:white; border-radius:10px; font-weight:700;
                     font-size:0.85rem; cursor:pointer; font-family:'Montserrat',sans-serif; transition:0.2s;">
                     <i class="fas fa-hand-holding"></i> Solicitar
-                </button>` :
-                `<a href="../login.html"
+                  </button>`
+                : `<a href="../login.html"
                     style="display:block; margin-top:12px; width:100%; padding:10px; text-align:center;
                     background:var(--primary); color:white; border-radius:10px; font-weight:700;
                     font-size:0.85rem; text-decoration:none; box-sizing:border-box;">
                     <i class="fas fa-right-to-bracket"></i> Inicia sesión para solicitar
-                </a>`
+                  </a>`
         } else {
             boton = `<button disabled
                 style="margin-top:12px; width:100%; padding:10px; border:none;
                 background:#e2e8f0; color:#94a3b8; border-radius:10px; font-weight:700;
                 font-size:0.85rem; cursor:not-allowed; font-family:'Montserrat',sans-serif;">
                 <i class="fas fa-ban"></i> No disponible
-            </button>`
+              </button>`
         }
 
         return `
@@ -156,12 +174,11 @@ function renderizarEquipos(equipos) {
             <div style="position:relative; background:#fff; border-radius:12px; overflow:hidden;">
                 <img src="${equipo.ruta_imagen || 'https://placehold.co/300x180?text=Sin+imagen'}"
                     alt="${equipo.nombre}"
-                    style="width:100%; height:180px; object-fit:contain; padding:10px;" 
+                    style="width:100%; height:180px; object-fit:contain; padding:10px;"
                     onerror="this.src='https://placehold.co/300x180?text=Sin+imagen'">
-                
                 <span style="position:absolute; top:10px; right:10px;
-                            background:${getBadgeColor(equipo.estado)}; color:white;
-                            padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:700;">
+                    background:${getBadgeColor(equipo.estado)}; color:white;
+                    padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:700;">
                     ${equipo.estado}
                 </span>
             </div>
@@ -181,33 +198,26 @@ function renderizarEquipos(equipos) {
     renderizarPaginacion(totalPags, paginaActual)
 }
 
-// ─── RENDERIZAR PAGINACIÓN ────────────────────────────────────────
+// ─── PAGINACIÓN ───────────────────────────────────────────────────
 function renderizarPaginacion(totalPags, actual) {
     let paginador = document.getElementById('paginador')
-
     if (!paginador) {
         paginador = document.createElement('div')
         paginador.id = 'paginador'
-        paginador.style.cssText = `
-            display:flex; justify-content:center; align-items:center;
+        paginador.style.cssText = `display:flex; justify-content:center; align-items:center;
             gap:8px; margin-top:40px; flex-wrap:wrap; width:100%;`
-        const contenedorPadre = document.getElementById('contenedorEquipos').parentElement;
-        contenedorPadre.appendChild(paginador);
+        document.getElementById('contenedorEquipos').parentElement.appendChild(paginador)
     }
-
     if (totalPags <= 1) { paginador.innerHTML = ''; return }
 
-    let html = ''
-    html += `<button onclick="cambiarPagina(${actual - 1})" ${actual === 1 ? 'disabled' : ''} class="btn-pag"> < </button>`
-
+    let html = `<button onclick="cambiarPagina(${actual - 1})" ${actual === 1 ? 'disabled' : ''} class="btn-pag"> &lt; </button>`
     for (let i = 1; i <= totalPags; i++) {
-        const esActual = i === actual
-        html += `<button onclick="cambiarPagina(${i})" 
-                style="background:${esActual ? 'var(--primary)' : 'white'}; color:${esActual ? 'white' : 'var(--primary)'}"
-                class="btn-pag">${i}</button>`
+        html += `<button onclick="cambiarPagina(${i})"
+            style="background:${i === actual ? 'var(--primary)' : 'white'};
+                   color:${i === actual ? 'white' : 'var(--primary)'}"
+            class="btn-pag">${i}</button>`
     }
-
-    html += `<button onclick="cambiarPagina(${actual + 1})" ${actual === totalPags ? 'disabled' : ''} class="btn-pag"> > </button>`
+    html += `<button onclick="cambiarPagina(${actual + 1})" ${actual === totalPags ? 'disabled' : ''} class="btn-pag"> &gt; </button>`
     paginador.innerHTML = html
 }
 
@@ -221,69 +231,74 @@ function cambiarPagina(pagina) {
 
 // ─── SELECCIONAR CATEGORÍA ────────────────────────────────────────
 function seleccionarCategoria(nombreCategoria, elemento) {
-    document.querySelectorAll('.categoria-item').forEach(el => el.classList.remove('activa'));
-    if(elemento) elemento.classList.add('activa');
+    document.querySelectorAll('.categoria-item').forEach(el => el.classList.remove('activa'))
+    if (elemento) elemento.classList.add('activa')
+    categoriaActiva = nombreCategoria
 
-    categoriaActiva = nombreCategoria;
-    const titulo = document.getElementById('tituloSeccion');
-    titulo.textContent = nombreCategoria ? nombreCategoria : 'Catálogo de Equipos';
+    document.getElementById('tituloSeccion').textContent =
+        nombreCategoria || 'Catálogo de Equipos'
 
-    const filtrados = nombreCategoria
-        ? todosLosEquipos.filter(e => e.categoria.trim().toLowerCase() === nombreCategoria.trim().toLowerCase())
-        : todosLosEquipos;
+    // Respetar búsqueda activa al cambiar categoría
+    const textoBusqueda = document.getElementById('buscadorEquipos')?.value.trim().toLowerCase() || ''
+    const base = nombreCategoria
+        ? todosLosEquipos.filter(e =>
+            e.categoria.trim().toLowerCase() === nombreCategoria.trim().toLowerCase())
+        : todosLosEquipos
 
-    paginaActual = 1;
-    renderizarEquipos(filtrados);
+    const filtrados = textoBusqueda
+        ? base.filter(e => e.nombre.toLowerCase().includes(textoBusqueda))
+        : base
+
+    paginaActual = 1
+    renderizarEquipos(filtrados)
 }
 
-// ─── CARGAR CATEGORÍAS Y EQUIPOS ─────────────────────────────────
+// ─── CARGAR CATEGORÍAS ────────────────────────────────────────────
 async function cargarCategorias() {
     try {
-        const res = await fetch(`${API}/categorias`);
-        const categorias = await res.json();
-        const lista = document.getElementById('listaCategorias');
-        if (!lista) return;
+        const res = await fetch(`${API}/categorias`)
+        const categorias = await res.json()
+        const lista = document.getElementById('listaCategorias')
+        if (!lista) return
 
-        const itemTodos = lista.firstElementChild;
-        lista.innerHTML = '';
-        lista.appendChild(itemTodos);
+        const itemTodos = lista.firstElementChild
+        lista.innerHTML = ''
+        lista.appendChild(itemTodos)
 
         categorias.forEach(cat => {
-            const count = todosLosEquipos.filter(e => 
-                e.categoria.trim().toLowerCase() === cat.nombre.trim().toLowerCase()
-            ).length;
+            const count = todosLosEquipos.filter(e =>
+                e.categoria.trim().toLowerCase() === cat.nombre.trim().toLowerCase()).length
+            if (count === 0) return
 
-            if (count === 0) return;
-
-            const li = document.createElement('li');
+            const li = document.createElement('li')
             li.innerHTML = `
                 <a class="categoria-item" data-nombre="${cat.nombre}"
                 onclick="seleccionarCategoria('${cat.nombre}', this)">
                     <i class="fas fa-tag"></i>
                     <span>${cat.nombre}</span>
                     <span class="badge-count">${count}</span>
-                </a>`;
-            lista.appendChild(li);
-        });
+                </a>`
+            lista.appendChild(li)
+        })
 
-        const badgeTodos = document.getElementById('badge-todos');
-        if (badgeTodos) badgeTodos.textContent = todosLosEquipos.length;
+        const badgeTodos = document.getElementById('badge-todos')
+        if (badgeTodos) badgeTodos.textContent = todosLosEquipos.length
 
-    } catch (error) { console.error('Error:', error); }
+    } catch (error) { console.error('Error:', error) }
 }
 
+// ─── CARGAR EQUIPOS ───────────────────────────────────────────────
 async function cargarEquipos() {
     try {
-        const res = await fetch(`${API}/equipos`);
-        const data = await res.json();
-        todosLosEquipos = data;
-        renderizarEquipos(todosLosEquipos);
-        await cargarCategorias();
+        const res = await fetch(`${API}/equipos`)
+        todosLosEquipos = await res.json()
+        renderizarEquipos(todosLosEquipos)
+        await cargarCategorias()
     } catch (error) {
-        console.error("Error:", error);
+        console.error('Error:', error)
     }
 }
 
 // ─── INICIO ───────────────────────────────────────────────────────
-verificarSesion();
-cargarEquipos();
+verificarSesion()
+cargarEquipos()
